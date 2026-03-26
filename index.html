@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Premium Teacher Dashboard</title>
+<title>Teacher Dashboard</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -12,23 +12,24 @@
 
 body{
   background:linear-gradient(135deg,#6fbf73,#3e8e41);
-  padding:20px;
+  padding:10px;
 }
 
 .container{
+  width:100%;
   max-width:1400px;
   margin:auto;
   background:#fff;
   border-radius:20px;
-  padding:20px;
-  box-shadow:0 20px 50px rgba(0,0,0,0.2);
+  padding:15px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.2);
 }
 
 .header{
   display:flex;
   justify-content:space-between;
   flex-wrap:wrap;
-  margin-bottom:15px;
+  gap:10px;
 }
 
 select,input,button{
@@ -43,30 +44,24 @@ button{
   cursor:pointer;
 }
 
-.search-box{
-  margin:10px 0;
-  display:flex;
-  gap:10px;
-}
-
 /* KPI */
 .kpi-row{
   display:flex;
-  gap:10px;
   flex-wrap:wrap;
+  gap:10px;
+  margin-top:10px;
 }
 
 .card{
   flex:1;
-  min-width:150px;
-  padding:15px;
-  border-radius:12px;
+  min-width:120px;
+  padding:10px;
+  border-radius:10px;
   color:#fff;
   text-align:center;
 }
 
 .blue{background:#2196F3;}
-.purple{background:#9C27B0;}
 .green{background:#4CAF50;}
 .yellow{background:#fbc02d;}
 .orange{background:#ff7043;}
@@ -74,14 +69,14 @@ button{
 /* TABLE */
 .table-box{
   margin-top:10px;
-  max-height:400px;
+  max-height:55vh;
   overflow:auto;
 }
 
 table{
   width:100%;
   border-collapse:collapse;
-  font-size:14px;
+  font-size:13px;
 }
 
 th{
@@ -89,45 +84,35 @@ th{
   top:0;
   background:#2c3e50;
   color:#fff;
-  z-index:2;
 }
 
 td,th{
-  padding:10px;
+  padding:8px;
   border-bottom:1px solid #eee;
 }
 
-tr:nth-child(even){
-  background:#fafafa;
-}
+tr:nth-child(even){background:#fafafa;}
+tr:hover{background:#e8f4ff;cursor:pointer;}
 
-tr:hover{
-  background:#e8f4ff;
-  cursor:pointer;
-}
-
-/* STATUS */
 .status{
-  padding:4px 8px;
-  border-radius:8px;
+  padding:3px 6px;
+  border-radius:6px;
   color:#fff;
-  font-size:12px;
+  font-size:11px;
 }
 
 .good{background:#2ecc71;}
 .avg{background:#f39c12;}
 .bad{background:#e74c3c;}
 
-/* PAGINATION */
 .pagination{
-  display:flex;
-  justify-content:center;
+  text-align:center;
   margin-top:10px;
-  gap:5px;
 }
 
 .page-btn{
-  padding:5px 10px;
+  padding:5px 8px;
+  margin:2px;
   border:none;
   background:#ddd;
   cursor:pointer;
@@ -139,17 +124,25 @@ tr:hover{
 }
 
 .section-title{
-  margin-top:20px;
+  margin-top:15px;
   text-align:center;
-  font-weight:600;
 }
 
 .summary{
   display:flex;
   gap:10px;
-  margin-top:10px;
+  flex-wrap:wrap;
 }
 
+.summary .card{
+  flex:1;
+}
+
+/* 📱 Responsive */
+@media(max-width:768px){
+  table{font-size:11px;}
+  .card{font-size:12px;}
+}
 </style>
 </head>
 
@@ -158,16 +151,11 @@ tr:hover{
 <div class="container">
 
 <div class="header">
-  <h2>📊 Teacher Dashboard</h2>
+  <h3>📊 Teacher Dashboard</h3>
   <div>
     <select id="teacher"></select>
-    <button onclick="loadStudents()">Apply</button>
+    <input id="search" placeholder="Search..." onkeyup="loadStudents()">
   </div>
-</div>
-
-<div class="search-box">
-  <input id="search" placeholder="Search student..." onkeyup="loadStudents()">
-  <button onclick="openAdmin()">⚙ Admin</button>
 </div>
 
 <div class="kpi-row">
@@ -183,209 +171,5 @@ tr:hover{
 
 <div id="pagination"></div>
 <div id="details"></div>
-
-  <script>
-
-let DATABASE = [];
-let currentPage = 1;
-let rowsPerPage = 20;
-
-let pieChart,lineChart;
-
-// CSV PARSE
-function parseCSV(text){
- const rows=text.trim().split("\n");
- const headers=rows[0].split(",");
- return rows.slice(1).map(r=>{
-  let obj={};
-  r.split(",").forEach((v,i)=>obj[headers[i]]=v);
-  return obj;
- });
-}
-
-// LOAD CSV
-async function loadCSV(){
-
- let s=await fetch("students.csv").then(r=>r.text());
- let l=await fetch("logs.csv").then(r=>r.text());
-
- let students=parseCSV(s);
- let logs=parseCSV(l);
-
- DATABASE = students.map(s=>{
-  return {
-    ...s,
-    totalClass:+s.totalClass,
-    joined:+s.joined,
-    logs: logs.filter(x=>x.name===s.name).map(x=>({
-      date:x.date,
-      attendance:x.attendance,
-      obj:x.obj?+x.obj:"Absent",
-      subj:x.subj?+x.subj:"Absent"
-    }))
-  }
- });
-
- init();
- loadStudents();
-}
-
-// INIT
-function init(){
- let teachers=[...new Set(DATABASE.map(d=>d.teacher))];
- document.getElementById("teacher").innerHTML=
-  teachers.map(t=>`<option>${t}</option>`).join('');
-}
-
-// LOAD
-function loadStudents(){
-
- let teacher=document.getElementById("teacher").value;
- let search=document.getElementById("search").value.toLowerCase();
-
- let data=DATABASE.filter(d=>d.teacher===teacher);
- data=data.filter(d=>d.name.toLowerCase().includes(search));
-
- document.getElementById("totalStudents").innerText=data.length;
-
- let att=0,obj=0,subj=0;
-
- data.forEach(d=>{
-  let logs=d.logs;
-  let present=logs.filter(l=>l.attendance==="Present").length;
-  let total=logs.length;
-
-  let objArr=logs.map(l=>l.obj).filter(x=>typeof x==="number");
-  let subjArr=logs.map(l=>l.subj).filter(x=>typeof x==="number");
-
-  d.attendance=Math.round((present/total)*100)||0;
-  d.objAvg=objArr.length?Math.round(objArr.reduce((a,b)=>a+b,0)/objArr.length):0;
-  d.subjAvg=subjArr.length?Math.round(subjArr.reduce((a,b)=>a+b,0)/subjArr.length):0;
-
-  att+=d.attendance;
-  obj+=d.objAvg;
-  subj+=d.subjAvg;
- });
-
- let len=data.length||1;
-
- document.getElementById("avgAttendance").innerText=Math.round(att/len)+"%";
- document.getElementById("avgObj").innerText=Math.round(obj/len)+"%";
- document.getElementById("avgSubj").innerText=Math.round(subj/len)+"%";
-
- renderTable(data);
-}
-
-// TABLE
-function renderTable(data){
-
- let start=(currentPage-1)*rowsPerPage;
- let page=data.slice(start,start+rowsPerPage);
-
- let html=`<tr>
- <th>Name</th><th>Attendance</th><th>Status</th>
- </tr>`;
-
- page.forEach(d=>{
-  let cls=d.attendance<50?"bad":d.attendance<75?"avg":"good";
-  let txt=d.attendance<50?"Risk":"Average":"Good";
-
-  html+=`
-  <tr onclick="showDetails('${d.name}')">
-   <td>${d.name}</td>
-   <td>${d.attendance}%</td>
-   <td><span class="status ${cls}">${txt}</span></td>
-  </tr>`;
- });
-
- document.getElementById("table").innerHTML=html;
-
- renderPagination(data.length);
-}
-
-// PAGINATION
-function renderPagination(total){
- let pages=Math.ceil(total/rowsPerPage);
- let html="";
-
- for(let i=1;i<=pages;i++){
-  html+=`<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
- }
-
- document.getElementById("pagination").innerHTML=html;
-}
-
-function goPage(p){
- currentPage=p;
- loadStudents();
-}
-
-// DETAILS
-function showDetails(name){
-
- let s=DATABASE.find(d=>d.name===name);
- let logs=s.logs;
-
- let present=logs.filter(l=>l.attendance==="Present").length;
- let total=logs.length;
-
- let objArr=logs.map(l=>l.obj).filter(x=>typeof x==="number");
- let subjArr=logs.map(l=>l.subj).filter(x=>typeof x==="number");
-
- let objAvg=objArr.length?Math.round(objArr.reduce((a,b)=>a+b,0)/objArr.length):0;
- let subjAvg=subjArr.length?Math.round(subjArr.reduce((a,b)=>a+b,0)/subjArr.length):0;
-
- let html=`<h2 class="section-title">${name}</h2>
-
- <div class="summary">
-   <div class="card green">${Math.round((present/total)*100)}%</div>
-   <div class="card yellow">${objAvg}%</div>
-   <div class="card orange">${subjAvg}%</div>
- </div>
-
- <canvas id="pie"></canvas>
- <canvas id="line"></canvas>
- `;
-
- document.getElementById("details").innerHTML=html;
-
- if(pieChart) pieChart.destroy();
- if(lineChart) lineChart.destroy();
-
- pieChart=new Chart(document.getElementById("pie"),{
-  type:"pie",
-  data:{labels:["Present","Absent"],datasets:[{data:[present,total-present]}]}
- });
-
- lineChart=new Chart(document.getElementById("line"),{
-  type:"line",
-  data:{
-   labels:logs.map(l=>l.date),
-   datasets:[
-    {label:"Obj",data:logs.map(l=>l.obj||null)},
-    {label:"Subj",data:logs.map(l=>l.subj||null)}
-   ]
-  }
- });
-}
-
-// ADMIN
-function openAdmin(){
- document.getElementById("details").innerHTML=`
- <h3>Add Student</h3>
- <input id="n"><input id="t"><button onclick="add()">Add</button>
- `;
-}
-
-function add(){
- DATABASE.push({name:n.value,teacher:t.value,logs:[],totalClass:0,joined:0});
- loadStudents();
-}
-
-loadCSV();
-
-</script>
-</body>
-</html>
 
 </div>
