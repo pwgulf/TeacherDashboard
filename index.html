@@ -66,11 +66,14 @@ tr:hover{background:#f1f2f6;cursor:pointer;}
 <div id="details"></div>
 
 </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js">
 
 // 🔥 GLOBAL DATA
 let DATABASE = [];
+let pieChartInstance = null;
+let lineChartInstance = null;
 
 // CSV PARSER
 function parseCSV(text){
@@ -93,7 +96,6 @@ async function loadCSV(){
  const students = parseCSV(studentsText);
  const logs = parseCSV(logsText);
 
- // BUILD DATABASE (same structure as before)
  DATABASE = students.map(s=>{
    return {
      ...s,
@@ -113,8 +115,6 @@ async function loadCSV(){
  loadStudents();
 }
 
-// SAME FUNCTIONS (NO CHANGE)
-
 function init(){
  const teachers=[...new Set(DATABASE.map(d=>d.teacher))];
  document.getElementById("teacher").innerHTML=
@@ -124,9 +124,6 @@ function init(){
 function loadStudents(){
 
  const teacher=document.getElementById("teacher").value;
- const start=document.getElementById("startDate").value;
- const end=document.getElementById("endDate").value;
-
  const data=DATABASE.filter(d=>d.teacher===teacher);
 
  document.getElementById("totalStudents").innerText=data.length;
@@ -137,10 +134,6 @@ function loadStudents(){
 
  data.forEach(d=>{
   let logs=d.logs;
-
-  if(start && end){
-    logs=logs.filter(l=>l.date>=start && l.date<=end);
-  }
 
   let present=logs.filter(l=>l.attendance==="Present").length;
   let total=logs.length;
@@ -168,19 +161,11 @@ function loadStudents(){
 
 function renderTable(data){
 
- let html=`
- <tr>
-  <th>Name</th>
-  <th>Attendance</th>
-  <th>Last Class</th>
-  <th>Last Obj</th>
-  <th>Last Subj</th>
-  <th>Total</th>
-  <th>Joined</th>
-  <th>Absent</th>
-  <th>Obj%</th>
-  <th>Subj%</th>
-  <th>Rating</th>
+ let html=`<tr>
+  <th>Name</th><th>Attendance</th><th>Last Class</th>
+  <th>Last Obj</th><th>Last Subj</th>
+  <th>Total</th><th>Joined</th><th>Absent</th>
+  <th>Obj%</th><th>Subj%</th><th>Rating</th>
  </tr>`;
 
  data.forEach(d=>{
@@ -209,7 +194,6 @@ function renderTable(data){
 function showDetails(name){
 
  const student=DATABASE.find(d=>d.name===name);
-
  let logs=student.logs;
 
  let total=logs.length;
@@ -224,8 +208,7 @@ function showDetails(name){
 
  let html=`<h2 class="section-title">${name} - Detailed Report</h2>`;
 
- // ===== EXISTING TABLES =====
-
+ // TABLES
  html+=`<h3 class="section-title">📅 Attendance</h3><table>
  <tr><th>Date</th><th>Status</th></tr>`;
  logs.forEach(l=>{
@@ -247,63 +230,253 @@ function showDetails(name){
  });
  html+="</table>";
 
- // ===== SUMMARY =====
  html+=`
  <div class="summary">
    <div class="card green"><h3>${Math.round((present/total)*100)}%</h3><p>Attendance</p></div>
    <div class="card yellow"><h3>${objAvg}%</h3><p>Objective</p></div>
    <div class="card orange"><h3>${subjAvg}%</h3><p>Subjective</p></div>
  </div>
- `;
 
- // ===== ANALYTICS SECTION =====
- html+=`
  <h2 class="section-title">📊 Analytics</h2>
-
- <canvas id="pieChart" height="120"></canvas>
- <canvas id="lineChart" height="120"></canvas>
-
- <div style="margin-top:20px;text-align:center;font-weight:600">
-   🔴 Weak Detection:
-   ${objAvg<60 ? "Objective Weak ⚠️" : "Objective Good ✅"} |
-   ${subjAvg<60 ? "Subjective Weak ⚠️" : "Subjective Good ✅"}
- </div>
+ <canvas id="pieChart"></canvas>
+ <canvas id="lineChart"></canvas>
  `;
 
  document.getElementById("details").innerHTML=html;
 
- // ===== PIE CHART =====
- new Chart(document.getElementById("pieChart"), {
+ // DESTROY OLD CHARTS
+ if(pieChartInstance) pieChartInstance.destroy();
+ if(lineChartInstance) lineChartInstance.destroy();
+
+ // PIE
+ pieChartInstance = new Chart(document.getElementById("pieChart"), {
    type: 'pie',
    data: {
      labels: ['Present', 'Absent'],
-     datasets: [{
-       data: [present, absent]
-     }]
+     datasets: [{ data: [present, absent] }]
    }
  });
 
- // ===== LINE GRAPH =====
- let dates = logs.map(l=>l.date);
- let objData = logs.map(l=> typeof l.obj==="number"?l.obj:null);
- let subjData = logs.map(l=> typeof l.subj==="number"?l.subj:null);
-
- new Chart(document.getElementById("lineChart"), {
+ // LINE
+ lineChartInstance = new Chart(document.getElementById("lineChart"), {
    type: 'line',
    data: {
-     labels: dates,
+     labels: logs.map(l=>l.date),
      datasets: [
-       {label:"Objective", data: objData, fill:false},
-       {label:"Subjective", data: subjData, fill:false}
+       {label:"Objective", data: logs.map(l=>typeof l.obj==="number"?l.obj:null)},
+       {label:"Subjective", data: logs.map(l=>typeof l.subj==="number"?l.subj:null)}
      ]
    }
  });
-
 }
-// INIT
+
+loadCSV();
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+// 🔥 GLOBAL DATA
+let DATABASE = [];
+let pieChartInstance = null;
+let lineChartInstance = null;
+
+// CSV PARSER
+function parseCSV(text){
+ const rows = text.trim().split("\n");
+ const headers = rows[0].split(",");
+ return rows.slice(1).map(r=>{
+   const cols = r.split(",");
+   let obj={};
+   headers.forEach((h,i)=>obj[h]=cols[i]);
+   return obj;
+ });
+}
+
+// LOAD CSV
+async function loadCSV(){
+
+ const studentsText = await fetch("students.csv").then(r=>r.text());
+ const logsText = await fetch("logs.csv").then(r=>r.text());
+
+ const students = parseCSV(studentsText);
+ const logs = parseCSV(logsText);
+
+ DATABASE = students.map(s=>{
+   return {
+     ...s,
+     totalClass:+s.totalClass,
+     joined:+s.joined,
+     rating:+s.rating,
+     logs: logs.filter(l=>l.name===s.name).map(l=>({
+       date:l.date,
+       attendance:l.attendance,
+       obj:l.obj?+l.obj:"Absent",
+       subj:l.subj?+l.subj:"Absent"
+     }))
+   }
+ });
+
+ init();
+ loadStudents();
+}
+
+function init(){
+ const teachers=[...new Set(DATABASE.map(d=>d.teacher))];
+ document.getElementById("teacher").innerHTML=
+  teachers.map(t=>`<option>${t}</option>`).join('');
+}
+
+function loadStudents(){
+
+ const teacher=document.getElementById("teacher").value;
+ const data=DATABASE.filter(d=>d.teacher===teacher);
+
+ document.getElementById("totalStudents").innerText=data.length;
+ document.getElementById("batchName").innerText=data[0]?.batch || "-";
+ document.getElementById("sectionName").innerText=data[0]?.section || "-";
+
+ let att=0,obj=0,subj=0;
+
+ data.forEach(d=>{
+  let logs=d.logs;
+
+  let present=logs.filter(l=>l.attendance==="Present").length;
+  let total=logs.length;
+
+  let objArr=logs.map(l=>l.obj).filter(x=>typeof x==="number");
+  let subjArr=logs.map(l=>l.subj).filter(x=>typeof x==="number");
+
+  d.attendance=total?Math.round((present/total)*100):0;
+  d.objAvg=objArr.length?Math.round(objArr.reduce((a,b)=>a+b,0)/objArr.length):"-";
+  d.subjAvg=subjArr.length?Math.round(subjArr.reduce((a,b)=>a+b,0)/subjArr.length):"-";
+
+  att+=d.attendance;
+  obj+=(typeof d.objAvg==="number")?d.objAvg:0;
+  subj+=(typeof d.subjAvg==="number")?d.subjAvg:0;
+ });
+
+ let len=data.length||1;
+
+ document.getElementById("avgAttendance").innerText=Math.round(att/len)+"%";
+ document.getElementById("avgObj").innerText=Math.round(obj/len)+"%";
+ document.getElementById("avgSubj").innerText=Math.round(subj/len)+"%";
+
+ renderTable(data);
+}
+
+function renderTable(data){
+
+ let html=`<tr>
+  <th>Name</th><th>Attendance</th><th>Last Class</th>
+  <th>Last Obj</th><th>Last Subj</th>
+  <th>Total</th><th>Joined</th><th>Absent</th>
+  <th>Obj%</th><th>Subj%</th><th>Rating</th>
+ </tr>`;
+
+ data.forEach(d=>{
+  let color=d.attendance<50?"low":d.attendance<75?"mid":"high";
+  let absent=d.totalClass-d.joined;
+
+  html+=`
+  <tr onclick="showDetails('${d.name}')">
+    <td>${d.name}</td>
+    <td>${d.attendance}%<div class="progress"><div class="progress-bar ${color}" style="width:${d.attendance}%"></div></div></td>
+    <td>${d.lastClass}</td>
+    <td>${d.lastObj}</td>
+    <td>${d.lastSubj}</td>
+    <td>${d.totalClass}</td>
+    <td>${d.joined}</td>
+    <td>${absent}</td>
+    <td>${d.objAvg}</td>
+    <td>${d.subjAvg}</td>
+    <td>${d.rating}</td>
+  </tr>`;
+ });
+
+ document.getElementById("table").innerHTML=html;
+}
+
+function showDetails(name){
+
+ const student=DATABASE.find(d=>d.name===name);
+ let logs=student.logs;
+
+ let total=logs.length;
+ let present=logs.filter(l=>l.attendance==="Present").length;
+ let absent=total-present;
+
+ let objArr=logs.map(l=>l.obj).filter(x=>typeof x==="number");
+ let subjArr=logs.map(l=>l.subj).filter(x=>typeof x==="number");
+
+ let objAvg=objArr.length?Math.round(objArr.reduce((a,b)=>a+b,0)/objArr.length):0;
+ let subjAvg=subjArr.length?Math.round(subjArr.reduce((a,b)=>a+b,0)/subjArr.length):0;
+
+ let html=`<h2 class="section-title">${name} - Detailed Report</h2>`;
+
+ // TABLES
+ html+=`<h3 class="section-title">📅 Attendance</h3><table>
+ <tr><th>Date</th><th>Status</th></tr>`;
+ logs.forEach(l=>{
+  html+=`<tr><td>${l.date}</td><td>${l.attendance}</td></tr>`;
+ });
+ html+="</table>";
+
+ html+=`<h3 class="section-title">🧠 Objective</h3><table>
+ <tr><th>Date</th><th>Marks</th></tr>`;
+ logs.forEach(l=>{
+  html+=`<tr><td>${l.date}</td><td>${l.obj}</td></tr>`;
+ });
+ html+="</table>";
+
+ html+=`<h3 class="section-title">✍️ Subjective</h3><table>
+ <tr><th>Date</th><th>Marks</th></tr>`;
+ logs.forEach(l=>{
+  html+=`<tr><td>${l.date}</td><td>${l.subj}</td></tr>`;
+ });
+ html+="</table>";
+
+ html+=`
+ <div class="summary">
+   <div class="card green"><h3>${Math.round((present/total)*100)}%</h3><p>Attendance</p></div>
+   <div class="card yellow"><h3>${objAvg}%</h3><p>Objective</p></div>
+   <div class="card orange"><h3>${subjAvg}%</h3><p>Subjective</p></div>
+ </div>
+
+ <h2 class="section-title">📊 Analytics</h2>
+ <canvas id="pieChart"></canvas>
+ <canvas id="lineChart"></canvas>
+ `;
+
+ document.getElementById("details").innerHTML=html;
+
+ // DESTROY OLD CHARTS
+ if(pieChartInstance) pieChartInstance.destroy();
+ if(lineChartInstance) lineChartInstance.destroy();
+
+ // PIE
+ pieChartInstance = new Chart(document.getElementById("pieChart"), {
+   type: 'pie',
+   data: {
+     labels: ['Present', 'Absent'],
+     datasets: [{ data: [present, absent] }]
+   }
+ });
+
+ // LINE
+ lineChartInstance = new Chart(document.getElementById("lineChart"), {
+   type: 'line',
+   data: {
+     labels: logs.map(l=>l.date),
+     datasets: [
+       {label:"Objective", data: logs.map(l=>typeof l.obj==="number"?l.obj:null)},
+       {label:"Subjective", data: logs.map(l=>typeof l.subj==="number"?l.subj:null)}
+     ]
+   }
+ });
+}
+
 loadCSV();
 
 </script>
 
-</body>
-</html>
+</script>
