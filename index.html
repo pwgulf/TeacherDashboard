@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Ultimate Teacher Dashboard</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+/* SAME CSS — NO CHANGE */
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins';}
+body{background:linear-gradient(135deg,#6fbf73,#3e8e41);display:flex;justify-content:center;padding:30px;}
+.container{width:95%;max-width:1400px;background:#fff;border-radius:20px;padding:25px;box-shadow:0 20px 50px rgba(0,0,0,0.2);}
+.header{display:flex;justify-content:space-between;flex-wrap:wrap;margin-bottom:20px;}
+select,input,button{padding:10px;border-radius:8px;border:1px solid #ddd;}
+button{background:#2c3e50;color:#fff;cursor:pointer;}
+.kpi-row{display:flex;gap:15px;flex-wrap:wrap;margin-bottom:20px;}
+.card{flex:1;min-width:150px;padding:15px;border-radius:12px;color:#fff;text-align:center;}
+.blue{background:#2196F3;}
+.purple{background:#9C27B0;}
+.green{background:#4CAF50;}
+.yellow{background:#fbc02d;}
+.orange{background:#ff7043;}
+.table-box{margin-top:10px;overflow:auto;}
+table{width:100%;border-collapse:collapse;}
+th,td{padding:10px;border-bottom:1px solid #eee;text-align:center;}
+th{background:#f4f6f9;}
+tr:hover{background:#f1f2f6;cursor:pointer;}
+.progress{height:8px;background:#eee;border-radius:10px;}
+.progress-bar{height:100%;border-radius:10px;}
+.low{background:red;}
+.mid{background:orange;}
+.high{background:green;}
+.section-title{margin-top:20px;text-align:center;font-size:20px;font-weight:600;}
+.summary{display:flex;gap:15px;margin-top:20px;}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="header">
+  <h2>📊 Teacher Dashboard</h2>
+  <div>
+    <select id="teacher"></select>
+    <input type="date" id="startDate">
+    <input type="date" id="endDate">
+    <button onclick="loadStudents()">Apply</button>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="card blue"><h3 id="totalStudents"></h3><p>Students</p></div>
+  <div class="card purple"><h3 id="batchName"></h3><p>Batch</p></div>
+  <div class="card purple"><h3 id="sectionName"></h3><p>Section</p></div>
+  <div class="card green"><h3 id="avgAttendance"></h3><p>Attendance</p></div>
+  <div class="card yellow"><h3 id="avgObj"></h3><p>Objective</p></div>
+  <div class="card orange"><h3 id="avgSubj"></h3><p>Subjective</p></div>
+</div>
+
+<div class="table-box">
+<table id="table"></table>
+</div>
+
+<div id="details"></div>
+
+</div>
+
+<script>
+
+// 🔥 GLOBAL DATA
+let DATABASE = [];
+
+// CSV PARSER
+function parseCSV(text){
+ const rows = text.trim().split("\n");
+ const headers = rows[0].split(",");
+ return rows.slice(1).map(r=>{
+   const cols = r.split(",");
+   let obj={};
+   headers.forEach((h,i)=>obj[h]=cols[i]);
+   return obj;
+ });
+}
+
+// LOAD CSV
+async function loadCSV(){
+
+ const studentsText = await fetch("students.csv").then(r=>r.text());
+ const logsText = await fetch("logs.csv").then(r=>r.text());
+
+ const students = parseCSV(studentsText);
+ const logs = parseCSV(logsText);
+
+ // BUILD DATABASE (same structure as before)
+ DATABASE = students.map(s=>{
+   return {
+     ...s,
+     totalClass:+s.totalClass,
+     joined:+s.joined,
+     rating:+s.rating,
+     logs: logs.filter(l=>l.name===s.name).map(l=>({
+       date:l.date,
+       attendance:l.attendance,
+       obj:l.obj?+l.obj:"Absent",
+       subj:l.subj?+l.subj:"Absent"
+     }))
+   }
+ });
+
+ init();
+ loadStudents();
+}
+
+// SAME FUNCTIONS (NO CHANGE)
+
+function init(){
+ const teachers=[...new Set(DATABASE.map(d=>d.teacher))];
+ document.getElementById("teacher").innerHTML=
+  teachers.map(t=>`<option>${t}</option>`).join('');
+}
+
+function loadStudents(){
+
+ const teacher=document.getElementById("teacher").value;
+ const start=document.getElementById("startDate").value;
+ const end=document.getElementById("endDate").value;
+
+ const data=DATABASE.filter(d=>d.teacher===teacher);
+
+ document.getElementById("totalStudents").innerText=data.length;
+ document.getElementById("batchName").innerText=data[0]?.batch || "-";
+ document.getElementById("sectionName").innerText=data[0]?.section || "-";
+
+ let att=0,obj=0,subj=0;
+
+ data.forEach(d=>{
+  let logs=d.logs;
+
+  if(start && end){
+    logs=logs.filter(l=>l.date>=start && l.date<=end);
+  }
+
+  let present=logs.filter(l=>l.attendance==="Present").length;
+  let total=logs.length;
+
+  let objArr=logs.map(l=>l.obj).filter(x=>typeof x==="number");
+  let subjArr=logs.map(l=>l.subj).filter(x=>typeof x==="number");
+
+  d.attendance=total?Math.round((present/total)*100):0;
+  d.objAvg=objArr.length?Math.round(objArr.reduce((a,b)=>a+b,0)/objArr.length):"-";
+  d.subjAvg=subjArr.length?Math.round(subjArr.reduce((a,b)=>a+b,0)/subjArr.length):"-";
+
+  att+=d.attendance;
+  obj+=(typeof d.objAvg==="number")?d.objAvg:0;
+  subj+=(typeof d.subjAvg==="number")?d.subjAvg:0;
+ });
+
+ let len=data.length||1;
+
+ document.getElementById("avgAttendance").innerText=Math.round(att/len)+"%";
+ document.getElementById("avgObj").innerText=Math.round(obj/len)+"%";
+ document.getElementById("avgSubj").innerText=Math.round(subj/len)+"%";
+
+ renderTable(data);
+}
+
+function renderTable(data){
+
+ let html=`
+ <tr>
+  <th>Name</th>
+  <th>Attendance</th>
+  <th>Last Class</th>
+  <th>Last Obj</th>
+  <th>Last Subj</th>
+  <th>Total</th>
+  <th>Joined</th>
+  <th>Absent</th>
+  <th>Obj%</th>
+  <th>Subj%</th>
+  <th>Rating</th>
+ </tr>`;
+
+ data.forEach(d=>{
+  let color=d.attendance<50?"low":d.attendance<75?"mid":"high";
+  let absent=d.totalClass-d.joined;
+
+  html+=`
+  <tr onclick="showDetails('${d.name}')">
+    <td>${d.name}</td>
+    <td>${d.attendance}%<div class="progress"><div class="progress-bar ${color}" style="width:${d.attendance}%"></div></div></td>
+    <td>${d.lastClass}</td>
+    <td>${d.lastObj}</td>
+    <td>${d.lastSubj}</td>
+    <td>${d.totalClass}</td>
+    <td>${d.joined}</td>
+    <td>${absent}</td>
+    <td>${d.objAvg}</td>
+    <td>${d.subjAvg}</td>
+    <td>${d.rating}</td>
+  </tr>`;
+ });
+
+ document.getElementById("table").innerHTML=html;
+}
+
+function showDetails(name){
+
+ const student=DATABASE.find(d=>d.name===name);
+
+ let html=`<h2 class="section-title">${name} - Detailed Report</h2>`;
+
+ html+=`<h3 class="section-title">📅 Attendance</h3><table>
+ <tr><th>Date</th><th>Status</th></tr>`;
+ student.logs.forEach(l=>{
+  html+=`<tr><td>${l.date}</td><td>${l.attendance}</td></tr>`;
+ });
+ html+="</table>";
+
+ document.getElementById("details").innerHTML=html;
+}
+
+// INIT
+loadCSV();
+
+</script>
+
+</body>
+</html>
