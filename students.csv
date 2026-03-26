@@ -1,4 +1,30 @@
 teacher,batch,section,name,totalClass,joined,rating,lastClass,lastObj,lastSubj
-Rahul Sir,Batch A,A1,Aman,50,41,4,2026-03-20,2026-03-18,2026-03-15
-Neha Ma'am,Batch B,B1,Priya,60,54,5,2026-03-21,2026-03-20,2026-03-18
-Amit Sir,Batch C,C1,Sahil,45,16,2,2026-03-18,2026-03-15,2026-03-10
+Rahul Sir,Batch A,A1,Aman,50,45,5,2026-03-20,2026-03-18,2026-03-15
+Rahul Sir,Batch A,A1,Rohit,50,30,3,2026-03-20,2026-03-17,2026-03-14
+Rahul Sir,Batch A,A1,Neeraj,50,20,2,2026-03-19,2026-03-16,2026-03-13
+Rahul Sir,Batch A,A1,Kunal,50,48,5,2026-03-21,2026-03-19,2026-03-18
+Rahul Sir,Batch A,A1,Sachin,50,35,4,2026-03-20,2026-03-18,2026-03-15
+
+Neha Ma'am,Batch B,B1,Priya,60,58,5,2026-03-21,2026-03-20,2026-03-18
+Neha Ma'am,Batch B,B1,Sneha,60,40,3,2026-03-20,2026-03-18,2026-03-16
+Neha Ma'am,Batch B,B1,Ritu,60,30,2,2026-03-19,2026-03-17,2026-03-15
+Neha Ma'am,Batch B,B1,Kavya,60,55,5,2026-03-21,2026-03-20,2026-03-19
+Neha Ma'am,Batch B,B1,Pooja,60,45,4,2026-03-20,2026-03-18,2026-03-16
+
+Amit Sir,Batch C,C1,Sahil,45,20,2,2026-03-18,2026-03-15,2026-03-10
+Amit Sir,Batch C,C1,Raj,45,25,3,2026-03-19,2026-03-16,2026-03-12
+Amit Sir,Batch C,C1,Arjun,45,30,3,2026-03-20,2026-03-17,2026-03-14
+Amit Sir,Batch C,C1,Vikram,45,40,4,2026-03-21,2026-03-19,2026-03-18
+Amit Sir,Batch C,C1,Deepak,45,15,1,2026-03-18,2026-03-14,2026-03-10
+
+Anita Ma'am,Batch D,D1,Meena,55,50,5,2026-03-21,2026-03-20,2026-03-19
+Anita Ma'am,Batch D,D1,Rani,55,35,3,2026-03-20,2026-03-18,2026-03-16
+Anita Ma'am,Batch D,D1,Suman,55,25,2,2026-03-19,2026-03-17,2026-03-15
+Anita Ma'am,Batch D,D1,Lata,55,48,4,2026-03-21,2026-03-19,2026-03-18
+Anita Ma'am,Batch D,D1,Geeta,55,30,3,2026-03-20,2026-03-18,2026-03-16
+
+Vikas Sir,Batch E,E1,Manish,40,38,5,2026-03-21,2026-03-20,2026-03-19
+Vikas Sir,Batch E,E1,Ajay,40,25,3,2026-03-20,2026-03-18,2026-03-15
+Vikas Sir,Batch E,E1,Sunil,40,20,2,2026-03-19,2026-03-17,2026-03-14
+Vikas Sir,Batch E,E1,Anil,40,35,4,2026-03-21,2026-03-19,2026-03-18
+Vikas Sir,Batch E,E1,Ramesh,40,18,2,2026-03-18,2026-03-16,2026-03-12
