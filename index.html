@@ -173,3 +173,180 @@ tr:hover{background:#e8f4ff;cursor:pointer;}
 <div id="details"></div>
 
 </div>
+
+  <script>
+
+let DATABASE=[];
+let currentPage=1;
+let rowsPerPage=20;
+let pieChart,lineChart;
+
+// SAFE CSV PARSER
+function parseCSV(text){
+ return text.split("\n")
+ .filter(r=>r.trim()!="")
+ .slice(1)
+ .map(r=>{
+  let c=r.split(",");
+  return c;
+ });
+}
+
+async function loadCSV(){
+
+ let s=await fetch("students.csv").then(r=>r.text());
+ let l=await fetch("logs.csv").then(r=>r.text());
+
+ let students=parseCSV(s);
+ let logs=parseCSV(l);
+
+ DATABASE = students.map(c=>{
+  return {
+   teacher:c[0],
+   batch:c[1],
+   section:c[2],
+   name:c[3],
+   totalClass:+c[4],
+   joined:+c[5],
+   logs: logs.filter(x=>x[0]===c[3]).map(x=>({
+     date:x[1],
+     attendance:x[2],
+     obj:x[3]?+x[3]:"Absent",
+     subj:x[4]?+x[4]:"Absent"
+   }))
+  }
+ });
+
+ init();
+}
+
+function init(){
+ let teachers=[...new Set(DATABASE.map(d=>d.teacher))];
+ document.getElementById("teacher").innerHTML=
+ teachers.map(t=>`<option>${t}</option>`).join('');
+
+ loadStudents();
+}
+
+function loadStudents(){
+
+ let teacher=document.getElementById("teacher").value;
+ let search=document.getElementById("search").value.toLowerCase();
+
+ let data=DATABASE.filter(d=>d.teacher===teacher)
+ .filter(d=>d.name.toLowerCase().includes(search));
+
+ document.getElementById("totalStudents").innerText=data.length;
+
+ let att=0,obj=0,subj=0;
+
+ data.forEach(d=>{
+  let logs=d.logs;
+
+  let present=logs.filter(l=>l.attendance==="Present").length;
+  let total=logs.length||1;
+
+  let objArr=logs.map(l=>l.obj).filter(x=>typeof x==="number");
+  let subjArr=logs.map(l=>l.subj).filter(x=>typeof x==="number");
+
+  d.attendance=Math.round((present/total)*100);
+  d.objAvg=objArr.length?Math.round(objArr.reduce((a,b)=>a+b,0)/objArr.length):0;
+  d.subjAvg=subjArr.length?Math.round(subjArr.reduce((a,b)=>a+b,0)/subjArr.length):0;
+
+  att+=d.attendance;
+  obj+=d.objAvg;
+  subj+=d.subjAvg;
+ });
+
+ let len=data.length||1;
+
+ document.getElementById("avgAttendance").innerText=Math.round(att/len)+"%";
+ document.getElementById("avgObj").innerText=Math.round(obj/len)+"%";
+ document.getElementById("avgSubj").innerText=Math.round(subj/len)+"%";
+
+ renderTable(data);
+}
+
+function renderTable(data){
+
+ let start=(currentPage-1)*rowsPerPage;
+ let page=data.slice(start,start+rowsPerPage);
+
+ let html=`<tr>
+ <th>Name</th><th>Attendance</th><th>Status</th>
+ </tr>`;
+
+ page.forEach(d=>{
+  let cls=d.attendance<50?"bad":d.attendance<75?"avg":"good";
+  let txt=d.attendance<50?"Risk":d.attendance<75?"Avg":"Good";
+
+  html+=`
+  <tr onclick="showDetails('${d.name}')">
+   <td>${d.name}</td>
+   <td>${d.attendance}%</td>
+   <td><span class="status ${cls}">${txt}</span></td>
+  </tr>`;
+ });
+
+ document.getElementById("table").innerHTML=html;
+ renderPagination(data.length);
+}
+
+function renderPagination(total){
+ let pages=Math.ceil(total/rowsPerPage);
+ let html="";
+
+ for(let i=1;i<=pages;i++){
+  html+=`<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+ }
+
+ document.getElementById("pagination").innerHTML=html;
+}
+
+function goPage(p){
+ currentPage=p;
+ loadStudents();
+}
+
+function showDetails(name){
+
+ let s=DATABASE.find(d=>d.name===name);
+ let logs=s.logs;
+
+ let present=logs.filter(l=>l.attendance==="Present").length;
+ let total=logs.length||1;
+
+ let html=`<h3 class="section-title">${name}</h3>
+
+ <canvas id="pie"></canvas>
+ <canvas id="line"></canvas>
+ `;
+
+ document.getElementById("details").innerHTML=html;
+
+ if(pieChart) pieChart.destroy();
+ if(lineChart) lineChart.destroy();
+
+ pieChart=new Chart(document.getElementById("pie"),{
+  type:"pie",
+  data:{labels:["Present","Absent"],datasets:[{data:[present,total-present]}]}
+ });
+
+ lineChart=new Chart(document.getElementById("line"),{
+  type:"line",
+  data:{
+   labels:logs.map(l=>l.date),
+   datasets:[
+    {label:"Obj",data:logs.map(l=>l.obj||null)},
+    {label:"Subj",data:logs.map(l=>l.subj||null)}
+   ]
+  }
+ });
+}
+
+loadCSV();
+
+</script>
+
+</body>
+</html>
