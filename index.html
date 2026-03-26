@@ -67,7 +67,7 @@ tr:hover{background:#f1f2f6;cursor:pointer;}
 
 </div>
 
-<script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js">
 
 // 🔥 GLOBAL DATA
 let DATABASE = [];
@@ -210,74 +210,96 @@ function showDetails(name){
 
  const student=DATABASE.find(d=>d.name===name);
 
- let html=`<h2 class="section-title">${name} - Detailed Report</h2>`;
+ let logs=student.logs;
 
- // ✅ ATTENDANCE
- html+=`<h3 class="section-title">📅 Attendance</h3><table>
- <tr><th>Date</th><th>Status</th></tr>`;
- student.logs.forEach(l=>{
-  let color = l.attendance==="Present" ? "green" : "red";
-  html+=`<tr>
-    <td>${l.date}</td>
-    <td style="color:${color};font-weight:600">${l.attendance}</td>
-  </tr>`;
- });
- html+="</table>";
+ let total=logs.length;
+ let present=logs.filter(l=>l.attendance==="Present").length;
+ let absent=total-present;
 
- // ✅ OBJECTIVE
- html+=`<h3 class="section-title">🧠 Objective</h3><table>
- <tr><th>Date</th><th>Marks</th></tr>`;
- student.logs.forEach(l=>{
-  let val = (typeof l.obj === "number") ? l.obj : "Absent";
-  html+=`<tr>
-    <td>${l.date}</td>
-    <td>${val}</td>
-  </tr>`;
- });
- html+="</table>";
-
- // ✅ SUBJECTIVE
- html+=`<h3 class="section-title">✍️ Subjective</h3><table>
- <tr><th>Date</th><th>Marks</th></tr>`;
- student.logs.forEach(l=>{
-  let val = (typeof l.subj === "number") ? l.subj : "Absent";
-  html+=`<tr>
-    <td>${l.date}</td>
-    <td>${val}</td>
-  </tr>`;
- });
- html+="</table>";
-
- // ✅ SUMMARY (same as before)
- let total=student.logs.length;
- let present=student.logs.filter(l=>l.attendance==="Present").length;
-
- let objArr=student.logs.map(l=>l.obj).filter(x=>typeof x==="number");
- let subjArr=student.logs.map(l=>l.subj).filter(x=>typeof x==="number");
+ let objArr=logs.map(l=>l.obj).filter(x=>typeof x==="number");
+ let subjArr=logs.map(l=>l.subj).filter(x=>typeof x==="number");
 
  let objAvg=objArr.length?Math.round(objArr.reduce((a,b)=>a+b,0)/objArr.length):0;
  let subjAvg=subjArr.length?Math.round(subjArr.reduce((a,b)=>a+b,0)/subjArr.length):0;
 
+ let html=`<h2 class="section-title">${name} - Detailed Report</h2>`;
+
+ // ===== EXISTING TABLES =====
+
+ html+=`<h3 class="section-title">📅 Attendance</h3><table>
+ <tr><th>Date</th><th>Status</th></tr>`;
+ logs.forEach(l=>{
+  html+=`<tr><td>${l.date}</td><td>${l.attendance}</td></tr>`;
+ });
+ html+="</table>";
+
+ html+=`<h3 class="section-title">🧠 Objective</h3><table>
+ <tr><th>Date</th><th>Marks</th></tr>`;
+ logs.forEach(l=>{
+  html+=`<tr><td>${l.date}</td><td>${l.obj}</td></tr>`;
+ });
+ html+="</table>";
+
+ html+=`<h3 class="section-title">✍️ Subjective</h3><table>
+ <tr><th>Date</th><th>Marks</th></tr>`;
+ logs.forEach(l=>{
+  html+=`<tr><td>${l.date}</td><td>${l.subj}</td></tr>`;
+ });
+ html+="</table>";
+
+ // ===== SUMMARY =====
  html+=`
  <div class="summary">
-   <div class="card green">
-     <h3>${Math.round((present/total)*100)}%</h3>
-     <p>Attendance</p>
-   </div>
-   <div class="card yellow">
-     <h3>${objAvg}%</h3>
-     <p>Objective</p>
-   </div>
-   <div class="card orange">
-     <h3>${subjAvg}%</h3>
-     <p>Subjective</p>
-   </div>
+   <div class="card green"><h3>${Math.round((present/total)*100)}%</h3><p>Attendance</p></div>
+   <div class="card yellow"><h3>${objAvg}%</h3><p>Objective</p></div>
+   <div class="card orange"><h3>${subjAvg}%</h3><p>Subjective</p></div>
+ </div>
+ `;
+
+ // ===== ANALYTICS SECTION =====
+ html+=`
+ <h2 class="section-title">📊 Analytics</h2>
+
+ <canvas id="pieChart" height="120"></canvas>
+ <canvas id="lineChart" height="120"></canvas>
+
+ <div style="margin-top:20px;text-align:center;font-weight:600">
+   🔴 Weak Detection:
+   ${objAvg<60 ? "Objective Weak ⚠️" : "Objective Good ✅"} |
+   ${subjAvg<60 ? "Subjective Weak ⚠️" : "Subjective Good ✅"}
  </div>
  `;
 
  document.getElementById("details").innerHTML=html;
-}
 
+ // ===== PIE CHART =====
+ new Chart(document.getElementById("pieChart"), {
+   type: 'pie',
+   data: {
+     labels: ['Present', 'Absent'],
+     datasets: [{
+       data: [present, absent]
+     }]
+   }
+ });
+
+ // ===== LINE GRAPH =====
+ let dates = logs.map(l=>l.date);
+ let objData = logs.map(l=> typeof l.obj==="number"?l.obj:null);
+ let subjData = logs.map(l=> typeof l.subj==="number"?l.subj:null);
+
+ new Chart(document.getElementById("lineChart"), {
+   type: 'line',
+   data: {
+     labels: dates,
+     datasets: [
+       {label:"Objective", data: objData, fill:false},
+       {label:"Subjective", data: subjData, fill:false}
+     ]
+   }
+ });
+
+}
 // INIT
 loadCSV();
 
