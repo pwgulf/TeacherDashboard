@@ -2,10 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Teacher Dashboard</title>
+<title>Teacher Dashboard Pro</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins';}
@@ -25,6 +24,7 @@ body{
   box-shadow:0 10px 30px rgba(0,0,0,0.2);
 }
 
+/* HEADER */
 .header{
   display:flex;
   justify-content:space-between;
@@ -32,23 +32,17 @@ body{
   gap:10px;
 }
 
-select,input,button{
+select,input{
   padding:8px;
   border-radius:8px;
   border:1px solid #ddd;
 }
 
-button{
-  background:#2c3e50;
-  color:#fff;
-  cursor:pointer;
-}
-
 /* KPI */
 .kpi-row{
   display:flex;
-  flex-wrap:wrap;
   gap:10px;
+  flex-wrap:wrap;
   margin-top:10px;
 }
 
@@ -62,9 +56,15 @@ button{
 }
 
 .blue{background:#2196F3;}
+.purple{background:#9C27B0;}
 .green{background:#4CAF50;}
 .yellow{background:#fbc02d;}
 .orange{background:#ff7043;}
+
+/* SEARCH */
+.search{
+  margin-top:10px;
+}
 
 /* TABLE */
 .table-box{
@@ -94,6 +94,7 @@ td,th{
 tr:nth-child(even){background:#fafafa;}
 tr:hover{background:#e8f4ff;cursor:pointer;}
 
+/* STATUS */
 .status{
   padding:3px 6px;
   border-radius:6px;
@@ -105,6 +106,7 @@ tr:hover{background:#e8f4ff;cursor:pointer;}
 .avg{background:#f39c12;}
 .bad{background:#e74c3c;}
 
+/* PAGINATION */
 .pagination{
   text-align:center;
   margin-top:10px;
@@ -123,6 +125,7 @@ tr:hover{background:#e8f4ff;cursor:pointer;}
   color:#fff;
 }
 
+/* DETAILS */
 .section-title{
   margin-top:15px;
   text-align:center;
@@ -134,14 +137,9 @@ tr:hover{background:#e8f4ff;cursor:pointer;}
   flex-wrap:wrap;
 }
 
-.summary .card{
-  flex:1;
-}
-
-/* 📱 Responsive */
+/* RESPONSIVE */
 @media(max-width:768px){
   table{font-size:11px;}
-  .card{font-size:12px;}
 }
 </style>
 </head>
@@ -154,8 +152,13 @@ tr:hover{background:#e8f4ff;cursor:pointer;}
   <h3>📊 Teacher Dashboard</h3>
   <div>
     <select id="teacher"></select>
-    <input id="search" placeholder="Search..." onkeyup="loadStudents()">
+    <input type="date" id="startDate">
+    <input type="date" id="endDate">
   </div>
+</div>
+
+<div class="search">
+  <input id="search" placeholder="Search student..." onkeyup="loadStudents()">
 </div>
 
 <div class="kpi-row">
@@ -174,24 +177,22 @@ tr:hover{background:#e8f4ff;cursor:pointer;}
 
 </div>
 
-  <script>
+<script>
 
+// GLOBAL
 let DATABASE=[];
 let currentPage=1;
 let rowsPerPage=20;
-let pieChart,lineChart;
 
-// SAFE CSV PARSER
+// CSV PARSER
 function parseCSV(text){
  return text.split("\n")
  .filter(r=>r.trim()!="")
  .slice(1)
- .map(r=>{
-  let c=r.split(",");
-  return c;
- });
+ .map(r=>r.split(","));
 }
 
+// LOAD CSV
 async function loadCSV(){
 
  let s=await fetch("students.csv").then(r=>r.text());
@@ -208,6 +209,10 @@ async function loadCSV(){
    name:c[3],
    totalClass:+c[4],
    joined:+c[5],
+   rating:+c[6],
+   lastClass:c[7],
+   lastObj:c[8],
+   lastSubj:c[9],
    logs: logs.filter(x=>x[0]===c[3]).map(x=>({
      date:x[1],
      attendance:x[2],
@@ -228,6 +233,7 @@ function init(){
  loadStudents();
 }
 
+// LOAD STUDENTS
 function loadStudents(){
 
  let teacher=document.getElementById("teacher").value;
@@ -267,13 +273,14 @@ function loadStudents(){
  renderTable(data);
 }
 
+// TABLE
 function renderTable(data){
 
  let start=(currentPage-1)*rowsPerPage;
  let page=data.slice(start,start+rowsPerPage);
 
  let html=`<tr>
- <th>Name</th><th>Attendance</th><th>Status</th>
+ <th>Name</th><th>Attendance</th><th>Status</th><th>Obj%</th><th>Subj%</th>
  </tr>`;
 
  page.forEach(d=>{
@@ -285,6 +292,8 @@ function renderTable(data){
    <td>${d.name}</td>
    <td>${d.attendance}%</td>
    <td><span class="status ${cls}">${txt}</span></td>
+   <td>${d.objAvg}</td>
+   <td>${d.subjAvg}</td>
   </tr>`;
  });
 
@@ -292,6 +301,7 @@ function renderTable(data){
  renderPagination(data.length);
 }
 
+// PAGINATION
 function renderPagination(total){
  let pages=Math.ceil(total/rowsPerPage);
  let html="";
@@ -308,40 +318,28 @@ function goPage(p){
  loadStudents();
 }
 
+// DETAILS
 function showDetails(name){
 
  let s=DATABASE.find(d=>d.name===name);
- let logs=s.logs;
 
- let present=logs.filter(l=>l.attendance==="Present").length;
- let total=logs.length||1;
+ let html=`<h3 class="section-title">${name}</h3>`;
 
- let html=`<h3 class="section-title">${name}</h3>
+ html+=`<table>
+ <tr><th>Date</th><th>Attendance</th><th>Obj</th><th>Subj</th></tr>`;
 
- <canvas id="pie"></canvas>
- <canvas id="line"></canvas>
- `;
+ s.logs.forEach(l=>{
+  html+=`<tr>
+   <td>${l.date}</td>
+   <td>${l.attendance}</td>
+   <td>${l.obj}</td>
+   <td>${l.subj}</td>
+  </tr>`;
+ });
+
+ html+="</table>";
 
  document.getElementById("details").innerHTML=html;
-
- if(pieChart) pieChart.destroy();
- if(lineChart) lineChart.destroy();
-
- pieChart=new Chart(document.getElementById("pie"),{
-  type:"pie",
-  data:{labels:["Present","Absent"],datasets:[{data:[present,total-present]}]}
- });
-
- lineChart=new Chart(document.getElementById("line"),{
-  type:"line",
-  data:{
-   labels:logs.map(l=>l.date),
-   datasets:[
-    {label:"Obj",data:logs.map(l=>l.obj||null)},
-    {label:"Subj",data:logs.map(l=>l.subj||null)}
-   ]
-  }
- });
 }
 
 loadCSV();
