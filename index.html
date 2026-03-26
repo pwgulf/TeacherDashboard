@@ -2,37 +2,154 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Ultimate Teacher Dashboard</title>
+<title>Premium Teacher Dashboard</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-/* SAME CSS — NO CHANGE */
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins';}
-body{background:linear-gradient(135deg,#6fbf73,#3e8e41);display:flex;justify-content:center;padding:30px;}
-.container{width:95%;max-width:1400px;background:#fff;border-radius:20px;padding:25px;box-shadow:0 20px 50px rgba(0,0,0,0.2);}
-.header{display:flex;justify-content:space-between;flex-wrap:wrap;margin-bottom:20px;}
-select,input,button{padding:10px;border-radius:8px;border:1px solid #ddd;}
-button{background:#2c3e50;color:#fff;cursor:pointer;}
-.kpi-row{display:flex;gap:15px;flex-wrap:wrap;margin-bottom:20px;}
-.card{flex:1;min-width:150px;padding:15px;border-radius:12px;color:#fff;text-align:center;}
+
+body{
+  background:linear-gradient(135deg,#6fbf73,#3e8e41);
+  padding:20px;
+}
+
+.container{
+  max-width:1400px;
+  margin:auto;
+  background:#fff;
+  border-radius:20px;
+  padding:20px;
+  box-shadow:0 20px 50px rgba(0,0,0,0.2);
+}
+
+.header{
+  display:flex;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  margin-bottom:15px;
+}
+
+select,input,button{
+  padding:8px;
+  border-radius:8px;
+  border:1px solid #ddd;
+}
+
+button{
+  background:#2c3e50;
+  color:#fff;
+  cursor:pointer;
+}
+
+.search-box{
+  margin:10px 0;
+  display:flex;
+  gap:10px;
+}
+
+/* KPI */
+.kpi-row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.card{
+  flex:1;
+  min-width:150px;
+  padding:15px;
+  border-radius:12px;
+  color:#fff;
+  text-align:center;
+}
+
 .blue{background:#2196F3;}
 .purple{background:#9C27B0;}
 .green{background:#4CAF50;}
 .yellow{background:#fbc02d;}
 .orange{background:#ff7043;}
-.table-box{margin-top:10px;overflow:auto;}
-table{width:100%;border-collapse:collapse;}
-th,td{padding:10px;border-bottom:1px solid #eee;text-align:center;}
-th{background:#f4f6f9;}
-tr:hover{background:#f1f2f6;cursor:pointer;}
-.progress{height:8px;background:#eee;border-radius:10px;}
-.progress-bar{height:100%;border-radius:10px;}
-.low{background:red;}
-.mid{background:orange;}
-.high{background:green;}
-.section-title{margin-top:20px;text-align:center;font-size:20px;font-weight:600;}
-.summary{display:flex;gap:15px;margin-top:20px;}
+
+/* TABLE */
+.table-box{
+  margin-top:10px;
+  max-height:400px;
+  overflow:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:14px;
+}
+
+th{
+  position:sticky;
+  top:0;
+  background:#2c3e50;
+  color:#fff;
+  z-index:2;
+}
+
+td,th{
+  padding:10px;
+  border-bottom:1px solid #eee;
+}
+
+tr:nth-child(even){
+  background:#fafafa;
+}
+
+tr:hover{
+  background:#e8f4ff;
+  cursor:pointer;
+}
+
+/* STATUS */
+.status{
+  padding:4px 8px;
+  border-radius:8px;
+  color:#fff;
+  font-size:12px;
+}
+
+.good{background:#2ecc71;}
+.avg{background:#f39c12;}
+.bad{background:#e74c3c;}
+
+/* PAGINATION */
+.pagination{
+  display:flex;
+  justify-content:center;
+  margin-top:10px;
+  gap:5px;
+}
+
+.page-btn{
+  padding:5px 10px;
+  border:none;
+  background:#ddd;
+  cursor:pointer;
+}
+
+.page-btn.active{
+  background:#2c3e50;
+  color:#fff;
+}
+
+.section-title{
+  margin-top:20px;
+  text-align:center;
+  font-weight:600;
+}
+
+.summary{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+}
+
 </style>
 </head>
 
@@ -44,16 +161,17 @@ tr:hover{background:#f1f2f6;cursor:pointer;}
   <h2>📊 Teacher Dashboard</h2>
   <div>
     <select id="teacher"></select>
-    <input type="date" id="startDate">
-    <input type="date" id="endDate">
     <button onclick="loadStudents()">Apply</button>
   </div>
 </div>
 
+<div class="search-box">
+  <input id="search" placeholder="Search student..." onkeyup="loadStudents()">
+  <button onclick="openAdmin()">⚙ Admin</button>
+</div>
+
 <div class="kpi-row">
   <div class="card blue"><h3 id="totalStudents"></h3><p>Students</p></div>
-  <div class="card purple"><h3 id="batchName"></h3><p>Batch</p></div>
-  <div class="card purple"><h3 id="sectionName"></h3><p>Section</p></div>
   <div class="card green"><h3 id="avgAttendance"></h3><p>Attendance</p></div>
   <div class="card yellow"><h3 id="avgObj"></h3><p>Objective</p></div>
   <div class="card orange"><h3 id="avgSubj"></h3><p>Subjective</p></div>
@@ -63,420 +181,211 @@ tr:hover{background:#f1f2f6;cursor:pointer;}
 <table id="table"></table>
 </div>
 
+<div id="pagination"></div>
 <div id="details"></div>
 
+  <script>
+
+let DATABASE = [];
+let currentPage = 1;
+let rowsPerPage = 20;
+
+let pieChart,lineChart;
+
+// CSV PARSE
+function parseCSV(text){
+ const rows=text.trim().split("\n");
+ const headers=rows[0].split(",");
+ return rows.slice(1).map(r=>{
+  let obj={};
+  r.split(",").forEach((v,i)=>obj[headers[i]]=v);
+  return obj;
+ });
+}
+
+// LOAD CSV
+async function loadCSV(){
+
+ let s=await fetch("students.csv").then(r=>r.text());
+ let l=await fetch("logs.csv").then(r=>r.text());
+
+ let students=parseCSV(s);
+ let logs=parseCSV(l);
+
+ DATABASE = students.map(s=>{
+  return {
+    ...s,
+    totalClass:+s.totalClass,
+    joined:+s.joined,
+    logs: logs.filter(x=>x.name===s.name).map(x=>({
+      date:x.date,
+      attendance:x.attendance,
+      obj:x.obj?+x.obj:"Absent",
+      subj:x.subj?+x.subj:"Absent"
+    }))
+  }
+ });
+
+ init();
+ loadStudents();
+}
+
+// INIT
+function init(){
+ let teachers=[...new Set(DATABASE.map(d=>d.teacher))];
+ document.getElementById("teacher").innerHTML=
+  teachers.map(t=>`<option>${t}</option>`).join('');
+}
+
+// LOAD
+function loadStudents(){
+
+ let teacher=document.getElementById("teacher").value;
+ let search=document.getElementById("search").value.toLowerCase();
+
+ let data=DATABASE.filter(d=>d.teacher===teacher);
+ data=data.filter(d=>d.name.toLowerCase().includes(search));
+
+ document.getElementById("totalStudents").innerText=data.length;
+
+ let att=0,obj=0,subj=0;
+
+ data.forEach(d=>{
+  let logs=d.logs;
+  let present=logs.filter(l=>l.attendance==="Present").length;
+  let total=logs.length;
+
+  let objArr=logs.map(l=>l.obj).filter(x=>typeof x==="number");
+  let subjArr=logs.map(l=>l.subj).filter(x=>typeof x==="number");
+
+  d.attendance=Math.round((present/total)*100)||0;
+  d.objAvg=objArr.length?Math.round(objArr.reduce((a,b)=>a+b,0)/objArr.length):0;
+  d.subjAvg=subjArr.length?Math.round(subjArr.reduce((a,b)=>a+b,0)/subjArr.length):0;
+
+  att+=d.attendance;
+  obj+=d.objAvg;
+  subj+=d.subjAvg;
+ });
+
+ let len=data.length||1;
+
+ document.getElementById("avgAttendance").innerText=Math.round(att/len)+"%";
+ document.getElementById("avgObj").innerText=Math.round(obj/len)+"%";
+ document.getElementById("avgSubj").innerText=Math.round(subj/len)+"%";
+
+ renderTable(data);
+}
+
+// TABLE
+function renderTable(data){
+
+ let start=(currentPage-1)*rowsPerPage;
+ let page=data.slice(start,start+rowsPerPage);
+
+ let html=`<tr>
+ <th>Name</th><th>Attendance</th><th>Status</th>
+ </tr>`;
+
+ page.forEach(d=>{
+  let cls=d.attendance<50?"bad":d.attendance<75?"avg":"good";
+  let txt=d.attendance<50?"Risk":"Average":"Good";
+
+  html+=`
+  <tr onclick="showDetails('${d.name}')">
+   <td>${d.name}</td>
+   <td>${d.attendance}%</td>
+   <td><span class="status ${cls}">${txt}</span></td>
+  </tr>`;
+ });
+
+ document.getElementById("table").innerHTML=html;
+
+ renderPagination(data.length);
+}
+
+// PAGINATION
+function renderPagination(total){
+ let pages=Math.ceil(total/rowsPerPage);
+ let html="";
+
+ for(let i=1;i<=pages;i++){
+  html+=`<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+ }
+
+ document.getElementById("pagination").innerHTML=html;
+}
+
+function goPage(p){
+ currentPage=p;
+ loadStudents();
+}
+
+// DETAILS
+function showDetails(name){
+
+ let s=DATABASE.find(d=>d.name===name);
+ let logs=s.logs;
+
+ let present=logs.filter(l=>l.attendance==="Present").length;
+ let total=logs.length;
+
+ let objArr=logs.map(l=>l.obj).filter(x=>typeof x==="number");
+ let subjArr=logs.map(l=>l.subj).filter(x=>typeof x==="number");
+
+ let objAvg=objArr.length?Math.round(objArr.reduce((a,b)=>a+b,0)/objArr.length):0;
+ let subjAvg=subjArr.length?Math.round(subjArr.reduce((a,b)=>a+b,0)/subjArr.length):0;
+
+ let html=`<h2 class="section-title">${name}</h2>
+
+ <div class="summary">
+   <div class="card green">${Math.round((present/total)*100)}%</div>
+   <div class="card yellow">${objAvg}%</div>
+   <div class="card orange">${subjAvg}%</div>
+ </div>
+
+ <canvas id="pie"></canvas>
+ <canvas id="line"></canvas>
+ `;
+
+ document.getElementById("details").innerHTML=html;
+
+ if(pieChart) pieChart.destroy();
+ if(lineChart) lineChart.destroy();
+
+ pieChart=new Chart(document.getElementById("pie"),{
+  type:"pie",
+  data:{labels:["Present","Absent"],datasets:[{data:[present,total-present]}]}
+ });
+
+ lineChart=new Chart(document.getElementById("line"),{
+  type:"line",
+  data:{
+   labels:logs.map(l=>l.date),
+   datasets:[
+    {label:"Obj",data:logs.map(l=>l.obj||null)},
+    {label:"Subj",data:logs.map(l=>l.subj||null)}
+   ]
+  }
+ });
+}
+
+// ADMIN
+function openAdmin(){
+ document.getElementById("details").innerHTML=`
+ <h3>Add Student</h3>
+ <input id="n"><input id="t"><button onclick="add()">Add</button>
+ `;
+}
+
+function add(){
+ DATABASE.push({name:n.value,teacher:t.value,logs:[],totalClass:0,joined:0});
+ loadStudents();
+}
+
+loadCSV();
+
+</script>
+</body>
+</html>
+
 </div>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script>
-
-// 🔥 GLOBAL DATA
-let DATABASE = [];
-let pieChartInstance = null;
-let lineChartInstance = null;
-
-// CSV PARSER
-function parseCSV(text){
- const rows = text.trim().split("\n");
- const headers = rows[0].split(",");
- return rows.slice(1).map(r=>{
-   const cols = r.split(",");
-   let obj={};
-   headers.forEach((h,i)=>obj[h]=cols[i]);
-   return obj;
- });
-}
-
-// LOAD CSV
-async function loadCSV(){
-
- const studentsText = await fetch("students.csv").then(r=>r.text());
- const logsText = await fetch("logs.csv").then(r=>r.text());
-
- const students = parseCSV(studentsText);
- const logs = parseCSV(logsText);
-
- DATABASE = students.map(s=>{
-   return {
-     ...s,
-     totalClass:+s.totalClass,
-     joined:+s.joined,
-     rating:+s.rating,
-     logs: logs.filter(l=>l.name===s.name).map(l=>({
-       date:l.date,
-       attendance:l.attendance,
-       obj:l.obj?+l.obj:"Absent",
-       subj:l.subj?+l.subj:"Absent"
-     }))
-   }
- });
-
- init();
- loadStudents();
-}
-
-function init(){
- const teachers=[...new Set(DATABASE.map(d=>d.teacher))];
- document.getElementById("teacher").innerHTML=
-  teachers.map(t=>`<option>${t}</option>`).join('');
-}
-
-function loadStudents(){
-
- const teacher=document.getElementById("teacher").value;
- const data=DATABASE.filter(d=>d.teacher===teacher);
-
- document.getElementById("totalStudents").innerText=data.length;
- document.getElementById("batchName").innerText=data[0]?.batch || "-";
- document.getElementById("sectionName").innerText=data[0]?.section || "-";
-
- let att=0,obj=0,subj=0;
-
- data.forEach(d=>{
-  let logs=d.logs;
-
-  let present=logs.filter(l=>l.attendance==="Present").length;
-  let total=logs.length;
-
-  let objArr=logs.map(l=>l.obj).filter(x=>typeof x==="number");
-  let subjArr=logs.map(l=>l.subj).filter(x=>typeof x==="number");
-
-  d.attendance=total?Math.round((present/total)*100):0;
-  d.objAvg=objArr.length?Math.round(objArr.reduce((a,b)=>a+b,0)/objArr.length):"-";
-  d.subjAvg=subjArr.length?Math.round(subjArr.reduce((a,b)=>a+b,0)/subjArr.length):"-";
-
-  att+=d.attendance;
-  obj+=(typeof d.objAvg==="number")?d.objAvg:0;
-  subj+=(typeof d.subjAvg==="number")?d.subjAvg:0;
- });
-
- let len=data.length||1;
-
- document.getElementById("avgAttendance").innerText=Math.round(att/len)+"%";
- document.getElementById("avgObj").innerText=Math.round(obj/len)+"%";
- document.getElementById("avgSubj").innerText=Math.round(subj/len)+"%";
-
- renderTable(data);
-}
-
-function renderTable(data){
-
- let html=`<tr>
-  <th>Name</th><th>Attendance</th><th>Last Class</th>
-  <th>Last Obj</th><th>Last Subj</th>
-  <th>Total</th><th>Joined</th><th>Absent</th>
-  <th>Obj%</th><th>Subj%</th><th>Rating</th>
- </tr>`;
-
- data.forEach(d=>{
-  let color=d.attendance<50?"low":d.attendance<75?"mid":"high";
-  let absent=d.totalClass-d.joined;
-
-  html+=`
-  <tr onclick="showDetails('${d.name}')">
-    <td>${d.name}</td>
-    <td>${d.attendance}%<div class="progress"><div class="progress-bar ${color}" style="width:${d.attendance}%"></div></div></td>
-    <td>${d.lastClass}</td>
-    <td>${d.lastObj}</td>
-    <td>${d.lastSubj}</td>
-    <td>${d.totalClass}</td>
-    <td>${d.joined}</td>
-    <td>${absent}</td>
-    <td>${d.objAvg}</td>
-    <td>${d.subjAvg}</td>
-    <td>${d.rating}</td>
-  </tr>`;
- });
-
- document.getElementById("table").innerHTML=html;
-}
-
-function showDetails(name){
-
- const student=DATABASE.find(d=>d.name===name);
- let logs=student.logs;
-
- let total=logs.length;
- let present=logs.filter(l=>l.attendance==="Present").length;
- let absent=total-present;
-
- let objArr=logs.map(l=>l.obj).filter(x=>typeof x==="number");
- let subjArr=logs.map(l=>l.subj).filter(x=>typeof x==="number");
-
- let objAvg=objArr.length?Math.round(objArr.reduce((a,b)=>a+b,0)/objArr.length):0;
- let subjAvg=subjArr.length?Math.round(subjArr.reduce((a,b)=>a+b,0)/subjArr.length):0;
-
- let html=`<h2 class="section-title">${name} - Detailed Report</h2>`;
-
- // TABLES
- html+=`<h3 class="section-title">📅 Attendance</h3><table>
- <tr><th>Date</th><th>Status</th></tr>`;
- logs.forEach(l=>{
-  html+=`<tr><td>${l.date}</td><td>${l.attendance}</td></tr>`;
- });
- html+="</table>";
-
- html+=`<h3 class="section-title">🧠 Objective</h3><table>
- <tr><th>Date</th><th>Marks</th></tr>`;
- logs.forEach(l=>{
-  html+=`<tr><td>${l.date}</td><td>${l.obj}</td></tr>`;
- });
- html+="</table>";
-
- html+=`<h3 class="section-title">✍️ Subjective</h3><table>
- <tr><th>Date</th><th>Marks</th></tr>`;
- logs.forEach(l=>{
-  html+=`<tr><td>${l.date}</td><td>${l.subj}</td></tr>`;
- });
- html+="</table>";
-
- html+=`
- <div class="summary">
-   <div class="card green"><h3>${Math.round((present/total)*100)}%</h3><p>Attendance</p></div>
-   <div class="card yellow"><h3>${objAvg}%</h3><p>Objective</p></div>
-   <div class="card orange"><h3>${subjAvg}%</h3><p>Subjective</p></div>
- </div>
-
- <h2 class="section-title">📊 Analytics</h2>
- <canvas id="pieChart"></canvas>
- <canvas id="lineChart"></canvas>
- `;
-
- document.getElementById("details").innerHTML=html;
-
- // DESTROY OLD CHARTS
- if(pieChartInstance) pieChartInstance.destroy();
- if(lineChartInstance) lineChartInstance.destroy();
-
- // PIE
- pieChartInstance = new Chart(document.getElementById("pieChart"), {
-   type: 'pie',
-   data: {
-     labels: ['Present', 'Absent'],
-     datasets: [{ data: [present, absent] }]
-   }
- });
-
- // LINE
- lineChartInstance = new Chart(document.getElementById("lineChart"), {
-   type: 'line',
-   data: {
-     labels: logs.map(l=>l.date),
-     datasets: [
-       {label:"Objective", data: logs.map(l=>typeof l.obj==="number"?l.obj:null)},
-       {label:"Subjective", data: logs.map(l=>typeof l.subj==="number"?l.subj:null)}
-     ]
-   }
- });
-}
-
-loadCSV();
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script>
-
-// 🔥 GLOBAL DATA
-let DATABASE = [];
-let pieChartInstance = null;
-let lineChartInstance = null;
-
-// CSV PARSER
-function parseCSV(text){
- const rows = text.trim().split("\n");
- const headers = rows[0].split(",");
- return rows.slice(1).map(r=>{
-   const cols = r.split(",");
-   let obj={};
-   headers.forEach((h,i)=>obj[h]=cols[i]);
-   return obj;
- });
-}
-
-// LOAD CSV
-async function loadCSV(){
-
- const studentsText = await fetch("students.csv").then(r=>r.text());
- const logsText = await fetch("logs.csv").then(r=>r.text());
-
- const students = parseCSV(studentsText);
- const logs = parseCSV(logsText);
-
- DATABASE = students.map(s=>{
-   return {
-     ...s,
-     totalClass:+s.totalClass,
-     joined:+s.joined,
-     rating:+s.rating,
-     logs: logs.filter(l=>l.name===s.name).map(l=>({
-       date:l.date,
-       attendance:l.attendance,
-       obj:l.obj?+l.obj:"Absent",
-       subj:l.subj?+l.subj:"Absent"
-     }))
-   }
- });
-
- init();
- loadStudents();
-}
-
-function init(){
- const teachers=[...new Set(DATABASE.map(d=>d.teacher))];
- document.getElementById("teacher").innerHTML=
-  teachers.map(t=>`<option>${t}</option>`).join('');
-}
-
-function loadStudents(){
-
- const teacher=document.getElementById("teacher").value;
- const data=DATABASE.filter(d=>d.teacher===teacher);
-
- document.getElementById("totalStudents").innerText=data.length;
- document.getElementById("batchName").innerText=data[0]?.batch || "-";
- document.getElementById("sectionName").innerText=data[0]?.section || "-";
-
- let att=0,obj=0,subj=0;
-
- data.forEach(d=>{
-  let logs=d.logs;
-
-  let present=logs.filter(l=>l.attendance==="Present").length;
-  let total=logs.length;
-
-  let objArr=logs.map(l=>l.obj).filter(x=>typeof x==="number");
-  let subjArr=logs.map(l=>l.subj).filter(x=>typeof x==="number");
-
-  d.attendance=total?Math.round((present/total)*100):0;
-  d.objAvg=objArr.length?Math.round(objArr.reduce((a,b)=>a+b,0)/objArr.length):"-";
-  d.subjAvg=subjArr.length?Math.round(subjArr.reduce((a,b)=>a+b,0)/subjArr.length):"-";
-
-  att+=d.attendance;
-  obj+=(typeof d.objAvg==="number")?d.objAvg:0;
-  subj+=(typeof d.subjAvg==="number")?d.subjAvg:0;
- });
-
- let len=data.length||1;
-
- document.getElementById("avgAttendance").innerText=Math.round(att/len)+"%";
- document.getElementById("avgObj").innerText=Math.round(obj/len)+"%";
- document.getElementById("avgSubj").innerText=Math.round(subj/len)+"%";
-
- renderTable(data);
-}
-
-function renderTable(data){
-
- let html=`<tr>
-  <th>Name</th><th>Attendance</th><th>Last Class</th>
-  <th>Last Obj</th><th>Last Subj</th>
-  <th>Total</th><th>Joined</th><th>Absent</th>
-  <th>Obj%</th><th>Subj%</th><th>Rating</th>
- </tr>`;
-
- data.forEach(d=>{
-  let color=d.attendance<50?"low":d.attendance<75?"mid":"high";
-  let absent=d.totalClass-d.joined;
-
-  html+=`
-  <tr onclick="showDetails('${d.name}')">
-    <td>${d.name}</td>
-    <td>${d.attendance}%<div class="progress"><div class="progress-bar ${color}" style="width:${d.attendance}%"></div></div></td>
-    <td>${d.lastClass}</td>
-    <td>${d.lastObj}</td>
-    <td>${d.lastSubj}</td>
-    <td>${d.totalClass}</td>
-    <td>${d.joined}</td>
-    <td>${absent}</td>
-    <td>${d.objAvg}</td>
-    <td>${d.subjAvg}</td>
-    <td>${d.rating}</td>
-  </tr>`;
- });
-
- document.getElementById("table").innerHTML=html;
-}
-
-function showDetails(name){
-
- const student=DATABASE.find(d=>d.name===name);
- let logs=student.logs;
-
- let total=logs.length;
- let present=logs.filter(l=>l.attendance==="Present").length;
- let absent=total-present;
-
- let objArr=logs.map(l=>l.obj).filter(x=>typeof x==="number");
- let subjArr=logs.map(l=>l.subj).filter(x=>typeof x==="number");
-
- let objAvg=objArr.length?Math.round(objArr.reduce((a,b)=>a+b,0)/objArr.length):0;
- let subjAvg=subjArr.length?Math.round(subjArr.reduce((a,b)=>a+b,0)/subjArr.length):0;
-
- let html=`<h2 class="section-title">${name} - Detailed Report</h2>`;
-
- // TABLES
- html+=`<h3 class="section-title">📅 Attendance</h3><table>
- <tr><th>Date</th><th>Status</th></tr>`;
- logs.forEach(l=>{
-  html+=`<tr><td>${l.date}</td><td>${l.attendance}</td></tr>`;
- });
- html+="</table>";
-
- html+=`<h3 class="section-title">🧠 Objective</h3><table>
- <tr><th>Date</th><th>Marks</th></tr>`;
- logs.forEach(l=>{
-  html+=`<tr><td>${l.date}</td><td>${l.obj}</td></tr>`;
- });
- html+="</table>";
-
- html+=`<h3 class="section-title">✍️ Subjective</h3><table>
- <tr><th>Date</th><th>Marks</th></tr>`;
- logs.forEach(l=>{
-  html+=`<tr><td>${l.date}</td><td>${l.subj}</td></tr>`;
- });
- html+="</table>";
-
- html+=`
- <div class="summary">
-   <div class="card green"><h3>${Math.round((present/total)*100)}%</h3><p>Attendance</p></div>
-   <div class="card yellow"><h3>${objAvg}%</h3><p>Objective</p></div>
-   <div class="card orange"><h3>${subjAvg}%</h3><p>Subjective</p></div>
- </div>
-
- <h2 class="section-title">📊 Analytics</h2>
- <canvas id="pieChart"></canvas>
- <canvas id="lineChart"></canvas>
- `;
-
- document.getElementById("details").innerHTML=html;
-
- // DESTROY OLD CHARTS
- if(pieChartInstance) pieChartInstance.destroy();
- if(lineChartInstance) lineChartInstance.destroy();
-
- // PIE
- pieChartInstance = new Chart(document.getElementById("pieChart"), {
-   type: 'pie',
-   data: {
-     labels: ['Present', 'Absent'],
-     datasets: [{ data: [present, absent] }]
-   }
- });
-
- // LINE
- lineChartInstance = new Chart(document.getElementById("lineChart"), {
-   type: 'line',
-   data: {
-     labels: logs.map(l=>l.date),
-     datasets: [
-       {label:"Objective", data: logs.map(l=>typeof l.obj==="number"?l.obj:null)},
-       {label:"Subjective", data: logs.map(l=>typeof l.subj==="number"?l.subj:null)}
-     ]
-   }
- });
-}
-
-loadCSV();
-
-</script>
-
-</script>
